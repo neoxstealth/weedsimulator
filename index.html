@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WEED SIMULATOR</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <style>
+        :root { --bg: #030303; --panel: #111; --accent: #a3ff2e; --puke: #00ff00; }
+        
+        * { touch-action: none; -webkit-tap-highlight-color: transparent; user-select: none; }
+
+        body { 
+            background: var(--bg); 
+            color: white; 
+            font-family: 'Arial', sans-serif; 
+            margin: 0; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: row;
+            overflow: hidden; 
+        }
+
+        /* Mobiele layout aanpassing */
+        @media (max-width: 768px) {
+            body { flex-direction: column-reverse; }
+            #inventory { width: 100% !important; height: 35% !important; border-right: none !important; border-top: 2px solid #222; }
+            #ui-left { left: 10px !important; bottom: 37% !important; scale: 0.8; }
+            #lighter-wrap { bottom: 37% !important; right: 10px !important; width: 60px !important; }
+            #status { font-size: 14px !important; top: 10px !important; }
+            #joint-img { width: 250px !important; }
+        }
+
+        #trip-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; }
+        .puke-particle { position: absolute; background: var(--puke); border-radius: 50%; pointer-events: none; z-index: 1001; filter: blur(2px); }
+
+        /* Inventory */
+        #inventory { width: 300px; background: var(--panel); border-right: 2px solid #222; display: flex; flex-direction: column; z-index: 1000; overflow-y: auto; }
+        .tabs { display: flex; background: #222; position: sticky; top: 0; z-index: 2; }
+        .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 10px; font-weight: bold; color: #666; text-transform: uppercase; }
+        .tab.active { background: var(--panel); color: var(--accent); }
+        .item-list { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .item { background: #1a1a1a; border: 1px solid #333; padding: 8px; border-radius: 5px; text-align: center; font-size: 10px; }
+        .item img { width: 40px; margin-bottom: 5px; pointer-events: none; }
+        .item.locked { opacity: 0.1; }
+
+        /* Stage Area */
+        #stage { flex-grow: 1; position: relative; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, #101010, #000); overflow: hidden; }
+        #status { position: absolute; top: 20px; color: var(--accent); font-weight: bold; text-align: center; width: 100%; font-size: 18px; text-transform: uppercase; z-index: 100; }
+
+        /* Stage Items */
+        #joint-wrap, #bong-wrap { display: none; position: relative; z-index: 50; }
+        #joint-img { width: 350px; pointer-events: none; }
+        #bong-img { height: 300px; pointer-events: none; }
+        #cherry-hitbox { position: absolute; left: 0; top: 0; width: 60px; height: 100%; }
+        #bowl-hitbox { position: absolute; right: 60px; top: 150px; width: 40px; height: 40px; }
+
+        /* UI Elements */
+        #ui-left { position: absolute; bottom: 30px; left: 30px; display: flex; align-items: flex-end; gap: 15px; z-index: 1001; }
+        #phone-btn { width: 90px; cursor: pointer; }
+        #ashtray { width: 80px; cursor: pointer; opacity: 0.7; }
+
+        #lighter-wrap { position: absolute; bottom: 30px; right: 30px; width: 80px; z-index: 9999; }
+        #lighter-img { width: 100%; pointer-events: none; }
+        .flame { position: absolute; top: -30px; left: 35%; width: 15px; height: 35px; background: radial-gradient(circle at bottom, #fff, orange, red, transparent); border-radius: 50% 50% 20% 20%; display: none; animation: flicker 0.1s infinite; }
+
+        @keyframes flicker { 0% { transform: scale(1); } 100% { transform: scale(1.1); } }
+        @keyframes ring { 0% { transform: scale(1); } 50% { transform: scale(1.1) rotate(5deg); } 100% { transform: scale(1); } }
+        @keyframes soft-shake { 0% { transform: translate(1px, 0); } 50% { transform: translate(-1px, 1px); } 100% { transform: translate(0, -1px); } }
+        .smoke { position: absolute; background: rgba(255,255,255,0.2); border-radius: 50%; filter: blur(8px); pointer-events: none; }
+    </style>
+</head>
+<body id="main-body">
+
+<div id="trip-overlay"></div>
+
+<div id="inventory">
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('strains')">Stash</div>
+        <div class="tab" onclick="switchTab('gear')">Gear</div>
+        <div class="tab" onclick="switchTab('grinder-tab')">Grinder</div>
+    </div>
+    <div id="strains" class="item-list">
+        <div class="item locked" id="stash-diesel" onclick="startGrind('Sour Diesel')"><img src="sourdiesel.png"><span>Diesel</span></div>
+        <div class="item locked" id="stash-kush" onclick="startGrind('OG Kush')"><img src="ogkush.png"><span>Kush</span></div>
+    </div>
+    <div id="gear" class="item-list" style="display:none">
+        <div class="item" id="btn-vloei" onclick="addGear('vloei')"><img src="vloei.png"><span>Vloei</span></div>
+        <div class="item" id="btn-tabak" onclick="addGear('tabak')"><img src="americanspirit.png"><span>Tabak</span></div>
+        <div class="item" id="btn-tip" onclick="addGear('tip')"><img src="tip.png"><span>Tip</span></div>
+        <div class="item" id="btn-bong" onclick="useBong()"><img src="bong.png"><span>Bong</span></div>
+    </div>
+    <div id="grinder-tab" class="item-list" style="display:none">
+        <p id="grind-msg" style="grid-column: 1/3; text-align: center; color: #888; font-size: 10px;">Leeg...</p>
+        <div class="item locked" id="ground-item" onclick="pickUpWeed()"><img src="sourdiesel.png" style="filter: sepia(1) brightness(0.6);"><span>Pak op</span></div>
+    </div>
+</div>
+
+<div id="stage">
+    <div id="status">BEL DE DEALER!</div>
+    
+    <div id="joint-wrap">
+        <div id="cherry-hitbox"></div>
+        <img id="joint-img" src="jointuit.png">
+    </div>
+    
+    <div id="bong-wrap">
+        <div id="bowl-hitbox"></div>
+        <img id="bong-img" src="bong.png">
+    </div>
+    
+    <div id="ui-left">
+        <img src="telefoon.png" id="phone-btn" onclick="callDealer()">
+        <img src="asbak.png" id="ashtray" onclick="cleanUp()">
+    </div>
+
+    <div id="lighter-wrap">
+        <div class="flame" id="flame"></div>
+        <img src="aansteker.png" id="lighter-img">
+    </div>
+</div>
+
+<script>
+    let hasWeed = false, hasGroundWeed = false;
+    let gear = { vloei: false, tabak: false, tip: false };
+    let isRolled = false, isLit = false, isInhaling = false;
+    let jointWidth = 350, highLevel = 0, lungFullness = 0;
+
+    function switchTab(t) {
+        document.querySelectorAll('.item-list').forEach(el => el.style.display = 'none');
+        document.getElementById(t).style.display = 'grid';
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+    }
+
+    function callDealer() {
+        if(hasWeed) return;
+        document.getElementById('phone-btn').style.animation = "ring 0.1s infinite";
+        document.getElementById('status').innerText = "DEALER BELLEN...";
+        setTimeout(() => {
+            document.getElementById('phone-btn').style.animation = "none";
+            document.getElementById('status').innerText = "WIET IS ER!";
+            document.getElementById('stash-diesel').classList.remove('locked');
+            document.getElementById('stash-kush').classList.remove('locked');
+            hasWeed = true;
+        }, 1500);
+    }
+
+    function startGrind(name) {
+        if(!hasWeed) return;
+        document.getElementById('grind-msg').innerText = "Grinden...";
+        switchTab('grinder-tab');
+        setTimeout(() => {
+            document.getElementById('grind-msg').innerText = "Klaar!";
+            document.getElementById('ground-item').classList.remove('locked');
+        }, 800);
+    }
+
+    function pickUpWeed() {
+        if(document.getElementById('ground-item').classList.contains('locked')) return;
+        hasGroundWeed = true; switchTab('gear');
+    }
+
+    function addGear(type) {
+        gear[type] = true;
+        document.getElementById('btn-' + type).style.background = "#2a2a2a";
+        if(hasGroundWeed && gear.vloei && gear.tabak && gear.tip && !isRolled) {
+            isRolled = true; 
+            document.getElementById('joint-wrap').style.display = 'block';
+            document.getElementById('status').innerText = "DRAAIEN GELUKT!";
+        }
+    }
+
+    function useBong() {
+        if(!hasGroundWeed) return;
+        document.getElementById('joint-wrap').style.display = 'none';
+        document.getElementById('bong-wrap').style.display = 'block';
+        document.getElementById('status').innerText = "BONG IS KLAAR!";
+    }
+
+    // MULTI-PLATFORM CONTROLS (Touch & Mouse)
+    const lighter = document.getElementById('lighter-wrap'), flame = document.getElementById('flame');
+    let activeDrag = false;
+
+    function handleStart(e) {
+        activeDrag = true;
+        flame.style.display = 'block';
+        lighter.style.transition = "none";
+        moveLighter(e);
+    }
+
+    function handleMove(e) {
+        if(!activeDrag) return;
+        moveLighter(e);
+        
+        const lRect = flame.getBoundingClientRect();
+        
+        // Joint collision
+        if(isRolled && !isLit) {
+            const cRect = document.getElementById('cherry-hitbox').getBoundingClientRect();
+            if(lRect.left < cRect.right && lRect.right > cRect.left && lRect.top < cRect.bottom && lRect.bottom > cRect.top) {
+                isLit = true;
+                document.getElementById('joint-img').src = "jointaan.png";
+                document.getElementById('status').innerText = "HIJSEN!";
+            }
+        }
+
+        // Bong collision
+        if(document.getElementById('bong-wrap').style.display === 'block') {
+            const bRect = document.getElementById('bowl-hitbox').getBoundingClientRect();
+            if(lRect.left < bRect.right && lRect.right > bRect.left && lRect.top < bRect.bottom && lRect.bottom > bRect.top) {
+                highLevel = Math.min(highLevel + 0.04, 10);
+                applyTrip();
+                checkVomit();
+                spawnSmoke(bRect.left, bRect.top, 1);
+            }
+        }
+    }
+
+    function handleEnd() {
+        activeDrag = false;
+        flame.style.display = 'none';
+        lighter.style.transition = "0.5s";
+        lighter.style.left = "auto"; lighter.style.top = "auto";
+        lighter.style.right = "30px"; lighter.style.bottom = window.innerWidth < 768 ? "37%" : "30px";
+        if(isInhaling) releaseBreath();
+    }
+
+    function moveLighter(e) {
+        let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        lighter.style.left = (clientX - lighter.offsetWidth/2) + "px";
+        lighter.style.top = (clientY - lighter.offsetHeight/2) + "px";
+    }
+
+    lighter.addEventListener('mousedown', handleStart);
+    lighter.addEventListener('touchstart', handleStart);
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('touchmove', handleMove);
+    document.addEventListener('mouseup', handleEnd);
+    document.addEventListener('touchend', handleEnd);
+
+    // JOINT ROKEN (Nu ook met touch)
+    const jointWrap = document.getElementById('joint-wrap');
+    let inhaleInterval;
+
+    function startInhale() {
+        if(!isLit || jointWidth <= 50) return;
+        isInhaling = true;
+        document.getElementById('status').innerText = "INHALEREN...";
+        inhaleInterval = setInterval(() => {
+            if(jointWidth > 50) {
+                jointWidth -= 2;
+                lungFullness += 0.3;
+                document.getElementById('joint-img').style.width = jointWidth + "px";
+                if(jointWidth < 120) document.getElementById('joint-img').src = "stingingroger.png";
+                spawnSmoke(document.getElementById('cherry-hitbox').getBoundingClientRect().left, window.innerHeight/2, 1);
+            }
+        }, 50);
+    }
+
+    jointWrap.addEventListener('mousedown', startInhale);
+    jointWrap.addEventListener('touchstart', (e) => { e.preventDefault(); startInhale(); });
+
+    function releaseBreath() {
+        if(!isInhaling) return;
+        isInhaling = false; clearInterval(inhaleInterval);
+        document.getElementById('status').innerText = "HOUD IN...";
+        setTimeout(() => {
+            if(lungFullness > 0) {
+                highLevel = Math.min(highLevel + lungFullness, 10);
+                lungFullness = 0;
+                applyTrip();
+                checkVomit();
+                spawnMouthSmoke();
+                document.getElementById('status').innerText = "LEKKER.";
+            }
+        }, 1500);
+    }
+
+    function applyTrip() {
+        const body = document.getElementById('main-body'), overlay = document.getElementById('trip-overlay');
+        body.style.filter = highLevel > 0 ? `hue-rotate(${highLevel*15}deg)` : "none";
+        overlay.style.background = highLevel > 0 ? `rgba(163, 255, 46, ${highLevel*0.04})` : "transparent";
+        body.style.animation = highLevel > 6 ? "soft-shake 0.1s infinite" : "none";
+    }
+
+    function checkVomit() {
+        if(highLevel >= 8) {
+            pukeAnimation();
+            document.getElementById('status').innerText = "IEL! KLIK ASBAK.";
+        }
+    }
+
+    function cleanUp() {
+        highLevel = 0; applyTrip();
+        isRolled = false; isLit = false; jointWidth = 350;
+        document.getElementById('joint-wrap').style.display = 'none';
+        document.getElementById('bong-wrap').style.display = 'none';
+        document.getElementById('joint-img').src = "jointuit.png";
+        document.getElementById('joint-img').style.width = "350px";
+        document.getElementById('status').innerText = "OPGERUIMD.";
+    }
+
+    function pukeAnimation() {
+        const startX = window.innerWidth / 2, startY = window.innerHeight - (window.innerWidth < 768 ? 200 : 50);
+        for (let i = 0; i < 40; i++) {
+            setTimeout(() => {
+                const p = document.createElement('div'); p.className = 'puke-particle';
+                p.style.width = p.style.height = (Math.random()*10+5)+'px';
+                p.style.left = startX+'px'; p.style.top = startY+'px';
+                document.body.appendChild(p);
+                p.animate([{opacity:1},{transform:`translate(${(Math.random()-0.5)*200}px,-150px)`,opacity:0.8},{transform:`translate(${(Math.random()-0.5)*300}px,${window.innerHeight}px)`,opacity:0}], 1200).onfinish=()=>p.remove();
+            }, i*10);
+        }
+    }
+
+    function spawnSmoke(x, y, amount) {
+        let s = document.createElement('div'); s.className = 'smoke';
+        s.style.left = x + "px"; s.style.top = y + "px"; s.style.width = "15px"; s.style.height = "15px";
+        document.body.appendChild(s);
+        s.animate([{opacity:0.4},{opacity:0,transform:'translateY(-80px) scale(3)'}], 1500).onfinish=()=>s.remove();
+    }
+
+    function spawnMouthSmoke() {
+        for(let i=0; i<8; i++) {
+            setTimeout(() => {
+                let s = document.createElement('div'); s.className = 'smoke';
+                s.style.left = "50%"; s.style.bottom = "40%"; s.style.width = "30px"; s.style.height = "30px";
+                document.body.appendChild(s);
+                s.animate([{opacity:0.5},{opacity:0,transform:'translateY(-200px) scale(8)'}], 2500).onfinish=()=>s.remove();
+            }, i*100);
+        }
+    }
+</script>
+</body>
+</html>
