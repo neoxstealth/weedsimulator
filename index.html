@@ -2,337 +2,1061 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WEED SIMULATOR</title>
-    <link rel="icon" type="image/png" href="favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtuele Cannabis Lounge & Rooksimulator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        weed: {
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#052e16',
+                        },
+                        neon: {
+                            purple: '#a855f7',
+                            pink: '#ec4899',
+                            cyan: '#06b6d4',
+                            amber: '#f59e0b'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        heading: ['Space Grotesk', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
 
     <style>
-        :root { --bg: #030303; --panel: #111; --accent: #a3ff2e; --puke: #00ff00; }
-        
-        * { touch-action: none; -webkit-tap-highlight-color: transparent; user-select: none; }
+        /* Custom Smooth Glows & Animations */
+        .neon-glow-green { box-shadow: 0 0 25px rgba(34, 197, 94, 0.4); }
+        .neon-glow-purple { box-shadow: 0 0 25px rgba(168, 85, 247, 0.4); }
+        .neon-text-green { text-shadow: 0 0 10px rgba(34, 197, 94, 0.6); }
 
-        body { 
-            background: var(--bg); 
-            color: white; 
-            font-family: 'Arial', sans-serif; 
-            margin: 0; 
-            height: 100vh; 
-            display: flex; 
-            flex-direction: row;
-            overflow: hidden; 
+        /* Background themes */
+        .bg-coffeeshop { background: linear-gradient(rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.96)), url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80') center/cover; }
+        .bg-cosmic { background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 100%); }
+        .bg-sunset { background: linear-gradient(to bottom, #431407, #1e1b4b, #0f172a); }
+        .bg-lofi { background: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.9)), url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80') center/cover; }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        /* Mobiele layout aanpassing */
-        @media (max-width: 768px) {
-            body { flex-direction: column-reverse; }
-            #inventory { width: 100% !important; height: 35% !important; border-right: none !important; border-top: 2px solid #222; }
-            #ui-left { left: 10px !important; bottom: 37% !important; scale: 0.8; }
-            #lighter-wrap { bottom: 37% !important; right: 10px !important; width: 60px !important; }
-            #status { font-size: 14px !important; top: 10px !important; }
-            #joint-img { width: 250px !important; }
+        /* Grinder Rotation */
+        @keyframes spin-grinder {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(720deg); }
+        }
+        .animate-grind {
+            animation: spin-grinder 1.2s ease-in-out;
         }
 
-        #trip-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; }
-        .puke-particle { position: absolute; background: var(--puke); border-radius: 50%; pointer-events: none; z-index: 1001; filter: blur(2px); }
+        /* Microwave Plate Rotation */
+        @keyframes rotate-plate {
+            0% { transform: rotateX(60deg) rotateZ(0deg); }
+            100% { transform: rotateX(60deg) rotateZ(360deg); }
+        }
+        .microwave-plate-spin {
+            animation: rotate-plate 3s linear infinite;
+        }
 
-        /* Inventory */
-        #inventory { width: 300px; background: var(--panel); border-right: 2px solid #222; display: flex; flex-direction: column; z-index: 1000; overflow-y: auto; }
-        .tabs { display: flex; background: #222; position: sticky; top: 0; z-index: 2; }
-        .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 10px; font-weight: bold; color: #666; text-transform: uppercase; }
-        .tab.active { background: var(--panel); color: var(--accent); }
-        .item-list { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .item { background: #1a1a1a; border: 1px solid #333; padding: 8px; border-radius: 5px; text-align: center; font-size: 10px; }
-        .item img { width: 40px; margin-bottom: 5px; pointer-events: none; }
-        .item.locked { opacity: 0.1; }
-
-        /* Stage Area */
-        #stage { flex-grow: 1; position: relative; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, #101010, #000); overflow: hidden; }
-        #status { position: absolute; top: 20px; color: var(--accent); font-weight: bold; text-align: center; width: 100%; font-size: 18px; text-transform: uppercase; z-index: 100; }
-
-        /* Stage Items */
-        #joint-wrap, #bong-wrap { display: none; position: relative; z-index: 50; }
-        #joint-img { width: 350px; pointer-events: none; }
-        #bong-img { height: 300px; pointer-events: none; }
-        #cherry-hitbox { position: absolute; left: 0; top: 0; width: 60px; height: 100%; }
-        #bowl-hitbox { position: absolute; right: 60px; top: 150px; width: 40px; height: 40px; }
-
-        /* UI Elements */
-        #ui-left { position: absolute; bottom: 30px; left: 30px; display: flex; align-items: flex-end; gap: 15px; z-index: 1001; }
-        #phone-btn { width: 90px; cursor: pointer; }
-        #ashtray { width: 80px; cursor: pointer; opacity: 0.7; }
-
-        #lighter-wrap { position: absolute; bottom: 30px; right: 30px; width: 80px; z-index: 9999; }
-        #lighter-img { width: 100%; pointer-events: none; }
-        .flame { position: absolute; top: -30px; left: 35%; width: 15px; height: 35px; background: radial-gradient(circle at bottom, #fff, orange, red, transparent); border-radius: 50% 50% 20% 20%; display: none; animation: flicker 0.1s infinite; }
-
-        @keyframes flicker { 0% { transform: scale(1); } 100% { transform: scale(1.1); } }
-        @keyframes ring { 0% { transform: scale(1); } 50% { transform: scale(1.1) rotate(5deg); } 100% { transform: scale(1); } }
-        @keyframes soft-shake { 0% { transform: translate(1px, 0); } 50% { transform: translate(-1px, 1px); } 100% { transform: translate(0, -1px); } }
-        .smoke { position: absolute; background: rgba(255,255,255,0.2); border-radius: 50%; filter: blur(8px); pointer-events: none; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #22c55e; }
     </style>
 </head>
-<body id="main-body">
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col transition-all duration-700 overflow-x-hidden" id="app-body">
 
-<div id="trip-overlay"></div>
+    <header class="glass-panel sticky top-0 z-40 border-b border-slate-800 px-4 lg:px-8 py-3 flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-full bg-weed-500/20 flex items-center justify-center border border-weed-500/50 text-weed-400 text-xl font-bold shadow-lg">
+                <i class="fa-solid fa-cannabis"></i>
+            </div>
+            <div>
+                <h1 class="font-heading font-bold text-lg md:text-xl tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-weed-400 via-emerald-300 to-neon-purple">
+                    HighAtmosphere Deluxe
+                </h1>
+                <p class="text-xs text-slate-400">Virtuele Lounge, Draai-Studio & Munchie Supermarkt</p>
+            </div>
+        </div>
 
-<div id="inventory">
-    <div class="tabs">
-        <div class="tab active" onclick="switchTab('strains')">Stash</div>
-        <div class="tab" onclick="switchTab('gear')">Gear</div>
-        <div class="tab" onclick="switchTab('grinder-tab')">Grinder</div>
+        <!-- Navigation Tabs -->
+        <nav class="hidden md:flex bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-xs">
+            <button onclick="switchTab('lounge')" id="tab-btn-lounge" class="px-4 py-1.5 rounded-lg bg-weed-500 text-slate-950 font-bold transition flex items-center gap-2">
+                <i class="fa-solid fa-couch"></i> Lounge & Simulator
+            </button>
+            <button onclick="switchTab('roll')" id="tab-btn-roll" class="px-4 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2">
+                <i class="fa-solid fa-joint"></i> Draai Studio
+            </button>
+            <button onclick="switchTab('market')" id="tab-btn-market" class="px-4 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2">
+                <i class="fa-solid fa-store"></i> Munchie Supermarkt
+            </button>
+        </nav>
+
+        <!-- High & Money Status Bar -->
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center gap-3 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800">
+                <div class="text-xs flex items-center gap-1.5 text-amber-400 font-bold">
+                    <i class="fa-solid fa-coins"></i>
+                    <span id="user-money">€25.00</span>
+                </div>
+                <div class="h-4 w-px bg-slate-800"></div>
+                <div class="flex flex-col items-end">
+                    <div class="text-[10px] text-slate-400 flex items-center gap-1">
+                        <span>High</span>
+                        <span id="high-percent" class="text-weed-400 font-bold">0%</span>
+                    </div>
+                    <div class="w-20 bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700">
+                        <div id="high-bar" class="bg-gradient-to-r from-weed-500 via-emerald-400 to-neon-purple h-full w-0 transition-all duration-500"></div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="sober-btn" class="px-3 py-1.5 text-xs rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1" title="Sober worden">
+                <i class="fa-solid fa-droplet text-cyan-400"></i>
+                <span class="hidden sm:inline">Reset</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation Bar -->
+    <div class="md:hidden bg-slate-900 border-b border-slate-800 p-2 flex justify-around text-xs sticky top-[61px] z-30">
+        <button onclick="switchTab('lounge')" id="mob-btn-lounge" class="px-3 py-1.5 rounded-lg bg-weed-500 text-slate-950 font-bold">Lounge</button>
+        <button onclick="switchTab('roll')" id="mob-btn-roll" class="px-3 py-1.5 rounded-lg text-slate-400">Draai Studio</button>
+        <button onclick="switchTab('market')" id="mob-btn-market" class="px-3 py-1.5 rounded-lg text-slate-400">Supermarkt</button>
     </div>
-    <div id="strains" class="item-list">
-        <div class="item locked" id="stash-diesel" onclick="startGrind('Sour Diesel')"><img src="sourdiesel.png"><span>Diesel</span></div>
-        <div class="item locked" id="stash-kush" onclick="startGrind('OG Kush')"><img src="ogkush.png"><span>Kush</span></div>
-    </div>
-    <div id="gear" class="item-list" style="display:none">
-        <div class="item" id="btn-vloei" onclick="addGear('vloei')"><img src="vloei.png"><span>Vloei</span></div>
-        <div class="item" id="btn-tabak" onclick="addGear('tabak')"><img src="americanspirit.png"><span>Tabak</span></div>
-        <div class="item" id="btn-tip" onclick="addGear('tip')"><img src="tip.png"><span>Tip</span></div>
-        <div class="item" id="btn-bong" onclick="useBong()"><img src="bong.png"><span>Bong</span></div>
-    </div>
-    <div id="grinder-tab" class="item-list" style="display:none">
-        <p id="grind-msg" style="grid-column: 1/3; text-align: center; color: #888; font-size: 10px;">Leeg...</p>
-        <div class="item locked" id="ground-item" onclick="pickUpWeed()"><img src="sourdiesel.png" style="filter: sepia(1) brightness(0.6);"><span>Pak op</span></div>
-    </div>
-</div>
 
-<div id="stage">
-    <div id="status">BEL DE DEALER!</div>
-    
-    <div id="joint-wrap">
-        <div id="cherry-hitbox"></div>
-        <img id="joint-img" src="jointuit.png">
-    </div>
-    
-    <div id="bong-wrap">
-        <div id="bowl-hitbox"></div>
-        <img id="bong-img" src="bong.png">
-    </div>
-    
-    <div id="ui-left">
-        <img src="telefoon.png" id="phone-btn" onclick="callDealer()">
-        <img src="asbak.png" id="ashtray" onclick="cleanUp()">
-    </div>
+    <main class="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-6">
 
-    <div id="lighter-wrap">
-        <div class="flame" id="flame"></div>
-        <img src="aansteker.png" id="lighter-img">
-    </div>
-</div>
+        <!-- ================= TAB 1: LOUNGE & SIMULATOR ================= -->
+        <div id="view-lounge" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left Column: Strains Selector -->
+            <section class="lg:col-span-3 space-y-5">
+                <div class="glass-panel rounded-2xl p-4 shadow-xl border border-slate-800">
+                    <h2 class="font-heading font-bold text-base text-slate-200 mb-2 flex items-center justify-between">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-seedling text-weed-400"></i> Wiet & Hasj Soorten</span>
+                        <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full">14 Soorten</span>
+                    </h2>
+                    
+                    <!-- Search & Filter -->
+                    <div class="mb-3">
+                        <input type="text" id="strain-search" oninput="filterStrains()" placeholder="Zoek op naam of effect..." class="w-full bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-weed-500">
+                    </div>
 
-<script>
-    let hasWeed = false, hasGroundWeed = false;
-    let gear = { vloei: false, tabak: false, tip: false };
-    let isRolled = false, isLit = false, isInhaling = false;
-    let jointWidth = 350, highLevel = 0, lungFullness = 0;
+                    <div class="space-y-2 max-h-[420px] overflow-y-auto pr-1" id="strain-list">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
 
-    function switchTab(t) {
-        document.querySelectorAll('.item-list').forEach(el => el.style.display = 'none');
-        document.getElementById(t).style.display = 'grid';
-        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-        event.currentTarget.classList.add('active');
-    }
+                <!-- Environment & Ambience -->
+                <div class="glass-panel rounded-2xl p-4 shadow-xl border border-slate-800">
+                    <h2 class="font-heading font-bold text-base text-slate-200 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-couch text-neon-purple"></i> Lounge Sfeer & Sound
+                    </h2>
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <button onclick="setTheme('cosmic')" class="p-2 text-xs rounded-xl border border-slate-700 bg-slate-800/80 hover:border-neon-purple transition flex items-center gap-2">
+                            <i class="fa-solid fa-atom text-neon-purple"></i> Cosmic
+                        </button>
+                        <button onclick="setTheme('coffeeshop')" class="p-2 text-xs rounded-xl border border-slate-700 bg-slate-800/80 hover:border-weed-500 transition flex items-center gap-2">
+                            <i class="fa-solid fa-store text-weed-400"></i> Coffee Shop
+                        </button>
+                        <button onclick="setTheme('sunset')" class="p-2 text-xs rounded-xl border border-slate-700 bg-slate-800/80 hover:border-amber-500 transition flex items-center gap-2">
+                            <i class="fa-solid fa-sun text-amber-500"></i> Sunset
+                        </button>
+                        <button onclick="setTheme('lofi')" class="p-2 text-xs rounded-xl border border-slate-700 bg-slate-800/80 hover:border-neon-pink transition flex items-center gap-2">
+                            <i class="fa-solid fa-moon text-neon-pink"></i> Lo-Fi Room
+                        </button>
+                    </div>
 
-    function callDealer() {
-        if(hasWeed) return;
-        document.getElementById('phone-btn').style.animation = "ring 0.1s infinite";
-        document.getElementById('status').innerText = "DEALER BELLEN...";
-        setTimeout(() => {
-            document.getElementById('phone-btn').style.animation = "none";
-            document.getElementById('status').innerText = "WIET IS ER!";
-            document.getElementById('stash-diesel').classList.remove('locked');
-            document.getElementById('stash-kush').classList.remove('locked');
-            hasWeed = true;
-        }, 1500);
-    }
+                    <div class="flex items-center justify-between bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+                        <span class="text-xs font-medium text-slate-300">Relaxing Synth Soundscape</span>
+                        <button id="toggle-audio-btn" class="w-8 h-8 rounded-full bg-weed-500 text-slate-950 font-bold flex items-center justify-center hover:scale-105 transition">
+                            <i class="fa-solid fa-play text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
 
-    function startGrind(name) {
-        if(!hasWeed) return;
-        document.getElementById('grind-msg').innerText = "Grinden...";
-        switchTab('grinder-tab');
-        setTimeout(() => {
-            document.getElementById('grind-msg').innerText = "Klaar!";
-            document.getElementById('ground-item').classList.remove('locked');
-        }, 800);
-    }
+            <!-- Center Column: Smoking Simulator Canvas -->
+            <section class="lg:col-span-6 flex flex-col space-y-4">
+                <div class="glass-panel rounded-3xl p-6 relative flex-1 flex flex-col items-center justify-between min-h-[480px] overflow-hidden border border-slate-800 shadow-2xl">
+                    
+                    <!-- Background Particle / Smoke Canvas -->
+                    <canvas id="smokeCanvas" class="absolute inset-0 w-full h-full pointer-events-auto z-0"></canvas>
 
-    function pickUpWeed() {
-        if(document.getElementById('ground-item').classList.contains('locked')) return;
-        hasGroundWeed = true; switchTab('gear');
-    }
+                    <!-- Top Device Status Header -->
+                    <div class="z-10 w-full flex flex-wrap justify-between items-center gap-2">
+                        <div id="active-strain-badge" class="px-3 py-1 rounded-full bg-weed-500/10 border border-weed-500/30 text-weed-400 text-xs font-medium flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-weed-400 animate-pulse"></span>
+                            <span id="current-strain-name">Amsterdam Amnesia Haze</span>
+                        </div>
 
-    function addGear(type) {
-        gear[type] = true;
-        document.getElementById('btn-' + type).style.background = "#2a2a2a";
-        if(hasGroundWeed && gear.vloei && gear.tabak && gear.tip && !isRolled) {
-            isRolled = true; 
-            document.getElementById('joint-wrap').style.display = 'block';
-            document.getElementById('status').innerText = "DRAAIEN GELUKT!";
+                        <!-- Method Selector -->
+                        <div class="flex bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-xs">
+                            <button onclick="setMethod('joint')" id="btn-method-joint" class="px-3 py-1 rounded-lg bg-weed-500 text-slate-950 font-semibold transition">Joint</button>
+                            <button onclick="setMethod('bong')" id="btn-method-bong" class="px-3 py-1 rounded-lg text-slate-400 hover:text-white transition">Bong</button>
+                            <button onclick="setMethod('vape')" id="btn-method-vape" class="px-3 py-1 rounded-lg text-slate-400 hover:text-white transition">Vape</button>
+                            <button onclick="setMethod('custom')" id="btn-method-custom" class="px-3 py-1 rounded-lg text-slate-400 hover:text-white transition hidden">Zelfgedraaid</button>
+                        </div>
+                    </div>
+
+                    <!-- Visual Device View (Joint/Bong/Vape) -->
+                    <div class="z-10 my-auto text-center flex flex-col items-center justify-center relative min-h-[200px]" id="device-container">
+                        <div id="device-graphic" class="relative transition-transform duration-300">
+                            <!-- Graphics rendered via JS -->
+                        </div>
+                        
+                        <!-- Breath Indicator Gauge -->
+                        <div id="breath-indicator" class="mt-4 opacity-0 transition-opacity duration-300 flex flex-col items-center">
+                            <span class="text-xs text-weed-400 font-semibold tracking-wider uppercase mb-1">Inhaleren...</span>
+                            <div class="w-40 h-2.5 bg-slate-900 rounded-full border border-slate-700 overflow-hidden">
+                                <div id="breath-fill" class="h-full bg-weed-400 w-0 transition-all duration-75"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Inhale Action Controls -->
+                    <div class="z-10 w-full flex flex-col items-center space-y-2">
+                        <button id="inhale-btn" class="w-full sm:w-72 py-4 px-6 rounded-2xl bg-gradient-to-r from-weed-600 via-weed-500 to-emerald-500 hover:from-weed-500 hover:to-emerald-400 text-slate-950 font-heading font-bold text-lg shadow-lg hover:shadow-weed-500/20 active:scale-95 transition-all duration-200 flex items-center justify-center gap-3 border border-weed-400/40 select-none cursor-pointer">
+                            <i class="fa-solid fa-wind text-xl"></i>
+                            <span>INHALEER (HOUD VAST)</span>
+                        </button>
+                        <p class="text-[11px] text-slate-400 text-center">Houd ingedrukt om een teug te nemen. Beweeg je muis over het scherm om rook te verspreiden!</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Column: Strain Info & Stoner Thought -->
+            <section class="lg:col-span-3 space-y-5">
+                <div class="glass-panel rounded-2xl p-4 shadow-xl border border-slate-800" id="strain-details-card">
+                    <!-- Dynamic strain details -->
+                </div>
+
+                <div class="glass-panel rounded-2xl p-4 shadow-xl border border-slate-800">
+                    <h2 class="font-heading font-bold text-base text-slate-200 mb-2 flex items-center justify-between">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-lightbulb text-amber-400"></i> Stoner Thought</span>
+                        <button onclick="generateThought()" class="text-xs text-weed-400 hover:underline">Volgende</button>
+                    </h2>
+                    <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 min-h-[90px] flex items-center">
+                        <p id="thought-text" class="text-xs italic text-slate-300 leading-relaxed">
+                            "Als een rups verandert in een vlinder, herinnert hij zich dan zijn leven als rups?"
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ================= TAB 2: INTERACTIEVE DRAAI STUDIO ================= -->
+        <div id="view-roll" class="hidden max-w-4xl mx-auto">
+            <div class="glass-panel rounded-3xl p-6 shadow-2xl border border-slate-800 space-y-6">
+                
+                <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="font-heading font-bold text-xl text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-joint text-weed-400"></i> Joint Draai Studio
+                        </h2>
+                        <p class="text-xs text-slate-400">Doorloop alle stappen om je eigen perfecte joint te rollen!</p>
+                    </div>
+                    <span id="roll-step-badge" class="px-3 py-1 rounded-full bg-weed-500/20 text-weed-400 border border-weed-500/30 font-bold text-xs">
+                        Stap 1/5: Vloei Kiezen
+                    </span>
+                </div>
+
+                <!-- Interactive Workstation Canvas/Area -->
+                <div class="bg-slate-950/80 rounded-2xl border border-slate-800 p-8 min-h-[280px] flex flex-col items-center justify-center relative overflow-hidden" id="roll-workstation">
+                    <!-- Step 1 Graphics: Papers -->
+                    <div id="roll-step-1" class="w-full flex flex-col items-center gap-4">
+                        <span class="text-sm text-slate-300 font-semibold">Kies je vloeitje:</span>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full max-w-lg">
+                            <button onclick="selectPaper('King Size Normal', '#f8fafc')" class="p-4 rounded-xl bg-slate-900 border border-slate-700 hover:border-weed-500 flex flex-col items-center gap-2 transition group">
+                                <div class="w-16 h-6 bg-slate-200 rounded border border-slate-400 group-hover:scale-105 transition"></div>
+                                <span class="text-xs font-medium">Standard White</span>
+                            </button>
+                            <button onclick="selectPaper('Unbleached Hemp', '#d97706')" class="p-4 rounded-xl bg-slate-900 border border-slate-700 hover:border-weed-500 flex flex-col items-center gap-2 transition group">
+                                <div class="w-16 h-6 bg-amber-700/80 rounded border border-amber-600 group-hover:scale-105 transition"></div>
+                                <span class="text-xs font-medium">Organic Hemp</span>
+                            </button>
+                            <button onclick="selectPaper('Pink Edition', '#ec4899')" class="p-4 rounded-xl bg-slate-900 border border-slate-700 hover:border-weed-500 flex flex-col items-center gap-2 transition group">
+                                <div class="w-16 h-6 bg-pink-400 rounded border border-pink-300 group-hover:scale-105 transition"></div>
+                                <span class="text-xs font-medium">Pink Slim</span>
+                            </button>
+                            <button onclick="selectPaper('Transparent Cellulose', '#38bdf8')" class="p-4 rounded-xl bg-slate-900 border border-slate-700 hover:border-weed-500 flex flex-col items-center gap-2 transition group">
+                                <div class="w-16 h-6 bg-cyan-400/40 rounded border border-cyan-300 group-hover:scale-105 transition"></div>
+                                <span class="text-xs font-medium">Clear Glass</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 Graphics: Tip rolling -->
+                    <div id="roll-step-2" class="hidden w-full flex flex-col items-center gap-4">
+                        <span class="text-sm text-slate-300 font-semibold">Vouw en rol je tippetje:</span>
+                        <div class="flex items-center gap-6">
+                            <div id="tip-visual" class="w-12 h-12 rounded-full bg-amber-600 border-2 border-amber-400 flex items-center justify-center font-bold text-amber-100 text-lg transition-transform duration-300">
+                                W
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <button onclick="rollTipStyle('M-Tip')" class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl hover:border-weed-500 text-xs text-left">
+                                    <span class="font-bold text-weed-400 block">Klassiek M-Vouw</span>
+                                    <span class="text-slate-400 text-[10px]">Goede luchtstroom en houdt kruiden tegen</span>
+                                </button>
+                                <button onclick="rollTipStyle('Spiral-Tip')" class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl hover:border-weed-500 text-xs text-left">
+                                    <span class="font-bold text-weed-400 block">Spiraal Tip</span>
+                                    <span class="text-slate-400 text-[10px]">Strak opgerold voor stevigheid</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 Graphics: Grinder & Weed Base -->
+                    <div id="roll-step-3" class="hidden w-full flex flex-col items-center gap-4">
+                        <span class="text-sm text-slate-300 font-semibold">Grind de wiet in de grinder:</span>
+                        <div class="flex flex-col items-center gap-3">
+                            <div id="grinder-disc" class="w-24 h-24 rounded-full bg-slate-800 border-4 border-weed-500 flex items-center justify-center text-3xl text-weed-400 shadow-xl cursor-pointer" onclick="grindWeedAnimation()">
+                                <i class="fa-solid fa-gear"></i>
+                            </div>
+                            <p class="text-xs text-slate-400">Klik op de grinder om te malen!</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 Graphics: Fill Paper -->
+                    <div id="roll-step-4" class="hidden w-full flex flex-col items-center gap-4">
+                        <span class="text-sm text-slate-300 font-semibold">Verdeel de gemalen mix gelijkmatig:</span>
+                        <!-- Joint Paper Representation -->
+                        <div class="w-80 h-16 bg-slate-200/90 rounded-lg relative overflow-hidden border border-slate-400 p-2 flex items-center justify-between shadow-inner">
+                            <div id="paper-tip-placed" class="w-8 h-10 bg-amber-700 rounded text-[9px] text-white font-bold flex items-center justify-center">TIP</div>
+                            <div id="paper-weed-mix" class="flex-1 h-8 mx-2 bg-amber-900/40 rounded-full transition-all duration-300 opacity-0 flex items-center justify-center text-[10px] text-weed-300 font-bold">
+                                🌿 Gemalen Mix
+                            </div>
+                        </div>
+                        <button onclick="spreadMix()" class="px-4 py-2 bg-weed-500 text-slate-950 font-bold rounded-xl text-xs hover:bg-weed-400 transition">
+                            Strooi Mix op Vloei
+                        </button>
+                    </div>
+
+                    <!-- Step 5 Graphics: Roll & Light -->
+                    <div id="roll-step-5" class="hidden w-full flex flex-col items-center gap-4 text-center">
+                        <span class="text-sm text-slate-300 font-semibold">Rol dicht & steek aan!</span>
+                        <div id="finished-joint-preview" class="w-72 h-8 bg-slate-100 rounded-full border border-slate-300 relative flex items-center px-2 shadow-lg">
+                            <div class="w-6 h-6 bg-amber-700 rounded-full text-[8px] text-white flex items-center justify-center font-bold">TIP</div>
+                            <div class="flex-1 text-center text-xs font-bold text-slate-800" id="joint-final-label">Custom Joint</div>
+                            <div id="joint-fire" class="w-4 h-4 bg-red-500 rounded-full animate-ping opacity-0"></div>
+                        </div>
+                        <button onclick="lightJoint()" class="px-6 py-3 bg-gradient-to-r from-amber-500 to-red-500 text-white font-bold rounded-2xl text-sm hover:scale-105 transition flex items-center gap-2 shadow-lg">
+                            <i class="fa-solid fa-fire"></i> Steek Aan met Aansteker
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Footer Navigation Buttons -->
+                <div class="flex justify-between items-center pt-2">
+                    <button onclick="resetRollStudio()" class="px-4 py-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white border border-slate-800 text-xs">
+                        Opnieuw Beginnen
+                    </button>
+                    <span id="roll-status-text" class="text-xs text-weed-400 font-medium">Stap 1: Kies je favoriete vloeitje.</span>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ================= TAB 3: MUNCHIE SUPERMARKT & MAGNETRON ================= -->
+        <div id="view-market" class="hidden space-y-6">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Left 8 Cols: Supermarkt Catalogus -->
+                <div class="lg:col-span-8 space-y-4">
+                    <div class="glass-panel rounded-2xl p-5 border border-slate-800 flex justify-between items-center">
+                        <div>
+                            <h2 class="font-heading font-bold text-lg text-slate-100 flex items-center gap-2">
+                                <i class="fa-solid fa-basket-shopping text-amber-400"></i> Munchie Nachtwinkel
+                            </h2>
+                            <p class="text-xs text-slate-400">Koude drankjes, zoete snacks en warme magnetron maaltijden!</p>
+                        </div>
+                        <button onclick="addMoney()" class="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold hover:bg-amber-500/30 transition">
+                            + €10.00 Pinnen
+                        </button>
+                    </div>
+
+                    <!-- Category Filters -->
+                    <div class="flex gap-2 overflow-x-auto pb-1 text-xs">
+                        <button onclick="filterMarket('all')" class="px-3 py-1.5 rounded-xl bg-weed-500 text-slate-950 font-bold whitespace-nowrap">Alles</button>
+                        <button onclick="filterMarket('drinks')" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 whitespace-nowrap">Drankjes</button>
+                        <button onclick="filterMarket('snacks')" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 whitespace-nowrap">Snacks & Candy</button>
+                        <button onclick="filterMarket('meals')" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 whitespace-nowrap">Magnetron Maaltijden</button>
+                    </div>
+
+                    <!-- Products Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="market-products-grid">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- Right 4 Cols: Interactive Microwave & Food Oven -->
+                <div class="lg:col-span-4 space-y-4">
+                    <div class="glass-panel rounded-2xl p-5 border border-slate-800 space-y-4">
+                        <h2 class="font-heading font-bold text-base text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-kitchen-set text-red-400"></i> Magnetron Keuken
+                        </h2>
+
+                        <!-- Interactive Microwave Graphic & Screen -->
+                        <div class="bg-slate-900 rounded-2xl border-4 border-slate-800 p-4 shadow-2xl relative">
+                            <!-- Microwave Window -->
+                            <div class="w-full h-40 bg-slate-950 rounded-xl border-2 border-slate-700 relative flex items-center justify-center overflow-hidden">
+                                <!-- Interior Light overlay -->
+                                <div id="micro-light" class="absolute inset-0 bg-amber-400/10 opacity-0 transition-opacity"></div>
+                                
+                                <!-- Microwave Rotating Plate -->
+                                <div class="w-32 h-16 border border-slate-700 rounded-full flex items-center justify-center relative">
+                                    <div id="micro-food-item" class="text-2xl transition-transform duration-300">
+                                        <!-- Selected food icon appears here -->
+                                        🥣
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Microwave Control Panel -->
+                            <div class="mt-3 flex items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                                <!-- Digital Timer Screen -->
+                                <div class="bg-black px-3 py-1 rounded border border-green-500/40 text-weed-400 font-mono text-base font-bold tracking-widest" id="micro-timer">
+                                    00:30
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="flex gap-2">
+                                    <button onclick="setMicroTime(30)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded text-slate-300 font-bold">+30s</button>
+                                    <button onclick="startMicrowave()" id="micro-start-btn" class="px-3 py-1 bg-weed-500 hover:bg-weed-400 text-slate-950 text-xs rounded font-bold">START</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Munchie Satisfaction Status -->
+                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-xs space-y-1">
+                            <div class="flex justify-between font-medium">
+                                <span class="text-slate-400">Munchie Voldoening:</span>
+                                <span id="munchie-level-text" class="text-amber-400 font-bold">0%</span>
+                            </div>
+                            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                <div id="munchie-bar" class="bg-amber-400 h-full w-0% transition-all duration-300"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass-panel border-t border-slate-800 py-3 px-4 text-center text-xs text-slate-500 mt-auto">
+        <p>Virtuele Cannabis Simulator & Lounge • 100% Digitaal & Educatief • Geniet verantwoord</p>
+    </footer>
+
+    <script>
+        /* ----------------------------------------------------
+           1. DATA: 14 Strains & Products Data
+           ---------------------------------------------------- */
+        const STRAINS = [
+            { id: 'amnesia', name: 'Amsterdam Amnesia Haze', type: 'Sativa', thc: '22%', cbd: '0.1%', ratio: '80% Sativa / 20% Indica', flavors: ['Citrus', 'Aards'], effects: ['Euforisch', 'Energetisch'], color: '#22c55e', desc: 'Legendarische Amsterdamse Haze met een heerlijke frisse citrussmaak.' },
+            { id: 'northern', name: 'Northern Lights', type: 'Indica', thc: '19%', cbd: '0.5%', ratio: '90% Indica / 10% Sativa', flavors: ['Dennen', 'Kruidig'], effects: ['Diep Ontspannen', 'Slaap'], color: '#3b82f6', desc: 'Klassieke zuivere Indica voor volledige lichamelijke rust.' },
+            { id: 'superlemon', name: 'Super Lemon Haze', type: 'Sativa', thc: '21%', cbd: '0.2%', ratio: '70% Sativa / 30% Indica', flavors: ['Zure Citroen', 'Zoet'], effects: ['Creatief', 'Vrolijk'], color: '#eab308', desc: 'Meervoudig Cup-winnaar met krachtige citroenaroma’s.' },
+            { id: 'granddaddy', name: 'Granddaddy Purple', type: 'Indica', thc: '23%', cbd: '0.1%', ratio: '80% Indica / 20% Sativa', flavors: ['Bessen', 'Druiven'], effects: ['Body High', 'Calmerend'], color: '#a855f7', desc: 'Prachtige paarse toppen met een zoete bessensmaak.' },
+            { id: 'gorilla', name: 'Gorilla Glue #4', type: 'Hybride', thc: '26%', cbd: '0.1%', ratio: '50% Indica / 50% Sativa', flavors: ['Aards', 'Pine', 'Diesel'], effects: ['Heavy High', 'Relaxed'], color: '#16a34a', desc: 'Extreem krachtige hybride met plakkerige harsrijke toppen.' },
+            { id: 'ogkush', name: 'OG Kush', type: 'Hybride', thc: '24%', cbd: '0.2%', ratio: '55% Sativa / 45% Indica', flavors: ['Brandstof', 'Citrus'], effects: ['Mentale Focus', 'Couch-lock'], color: '#84cc16', desc: 'De wereldbekende Californische stam met uniek brandstof-aroma.' },
+            { id: 'gelato33', name: 'Gelato #33 (Larry Bird)', type: 'Hybride', thc: '25%', cbd: '0.1%', ratio: '55% Indica / 45% Sativa', flavors: ['Zoet', 'IJs', 'Citrus'], effects: ['Ontspannen', 'Blij'], color: '#ec4899', desc: 'Heerlijk zoet smaakprofiel dat doet denken aan vers fruitijs.' },
+            { id: 'bluedream', name: 'Blue Dream', type: 'Sativa', thc: '18%', cbd: '0.2%', ratio: '60% Sativa / 40% Indica', flavors: ['Blauwe Bes', 'Zoet'], effects: ['Zacht', 'Balans'], color: '#06b6d4', desc: 'Droomachtige milde Sativa voor een ontspannen overdag-high.' },
+            { id: 'cookies', name: 'Girl Scout Cookies (GSC)', type: 'Hybride', thc: '23%', cbd: '0.2%', ratio: '60% Indica / 40% Sativa', flavors: ['Koekjes', 'Zoet'], effects: ['Euforie', 'Diepe Relax'], color: '#f59e0b', desc: 'Zoete koekjesaroma’s met een snelle en langdurige werking.' },
+            { id: 'purplehaze', name: 'Purple Haze', type: 'Sativa', thc: '20%', cbd: '0.1%', ratio: '85% Sativa / 15% Indica', flavors: ['Bessen', 'Kruiden'], effects: ['Trippy', 'Creatief'], color: '#c084fc', desc: 'Beroemd gemaak door Jimi Hendrix. Geestverruimend en vrolijk.' },
+            { id: 'strawberry', name: 'Strawberry Cough', type: 'Sativa', thc: '19%', cbd: '0.2%', ratio: '80% Sativa / 20% Indica', flavors: ['Aardbei', 'Zoet'], effects: ['Anti-Stress', 'Sociaal'], color: '#f43f5e', desc: 'Rijke aardbeiensmaak die een glimlach op je gezicht tovert.' },
+            { id: 'afghan', name: 'Afghan Hash (Donkere Hasj)', type: 'Hasj', thc: '24%', cbd: '1.2%', ratio: '100% Indica Hasj', flavors: ['Zwaar', 'Aards', 'Kruidnagel'], effects: ['Zeer Zwaar', 'Droom'], color: '#78350f', desc: 'Traditionele handgerolde zwarte afghaan met rijke CBD aroma’s.' },
+            { id: 'superpolm', name: 'Super Polm Hasj', type: 'Hasj', thc: '21%', cbd: '0.8%', ratio: 'Hasj / Marokkaans', flavors: ['Zoet', 'Zacht', 'Pollen'], effects: ['Licht', 'Vrolijk'], color: '#b45309', desc: 'Milde blonde stuifmeel-hasj uit het Rifgebergte.' },
+            { id: 'zerozero', name: 'Moroccan Zero Zero', type: 'Hasj', thc: '25%', cbd: '0.9%', ratio: 'Top Quality Hasj', flavors: ['Puur', 'Kruidig'], effects: ['Heldere High', 'Relax'], color: '#d97706', desc: 'De allerhoogste kwaliteit eerste zeving Marokkaanse top-hasj.' }
+        ];
+
+        const PRODUCTS = [
+            // Drankjes
+            { id: 'chocomel', name: 'Koude Chocomel', category: 'drinks', price: 2.50, icon: '🧃', satisfaction: 25, isMicrowaveable: false },
+            { id: 'aadrink', name: 'AA Drink High Energy', category: 'drinks', price: 2.00, icon: '🍾', satisfaction: 20, isMicrowaveable: false },
+            { id: 'icetea', name: 'Sparkling Ice Tea', category: 'drinks', price: 2.20, icon: '🥤', satisfaction: 18, isMicrowaveable: false },
+            { id: 'water', name: 'Spa Blauw Water', category: 'drinks', price: 1.50, icon: '💧', satisfaction: 15, isMicrowaveable: false },
+            
+            // Snacks
+            { id: 'doritos', name: 'Doritos Nacho Cheese', category: 'snacks', price: 2.80, icon: '📐', satisfaction: 30, isMicrowaveable: false },
+            { id: 'spacecake', name: 'Space Cake Slice', category: 'snacks', price: 6.50, icon: '🍰', satisfaction: 50, isMicrowaveable: false },
+            { id: 'stroopwafel', name: 'Warme Stroopwafel', category: 'snacks', price: 1.80, icon: '🧇', satisfaction: 22, isMicrowaveable: true },
+            { id: 'benjerry', name: 'Ben & Jerry Cookie Dough', category: 'snacks', price: 5.50, icon: '🍨', satisfaction: 45, isMicrowaveable: false },
+
+            // Magnetron Maaltijden
+            { id: 'kapsalon', name: 'Doner Kapsalon Large', category: 'meals', price: 8.50, icon: '🍟', satisfaction: 75, isMicrowaveable: true },
+            { id: 'babipangang', name: 'Babi Pangang + Nasi', category: 'meals', price: 9.00, icon: '🍱', satisfaction: 80, isMicrowaveable: true },
+            { id: 'pizza', name: 'Pepperoni Diepvries Pizza', category: 'meals', price: 4.50, icon: '🍕', satisfaction: 60, isMicrowaveable: true },
+            { id: 'hotdogs', name: 'Magnetron Hotdogs (2x)', category: 'meals', price: 3.50, icon: '🌭', satisfaction: 40, isMicrowaveable: true }
+        ];
+
+        const THOUGHTS = [
+            "Als een rups verandert in een vlinder, herinnert hij zich dan zijn leven als rups?",
+            "Muziek is eigenlijk gewoon trillende lucht die onze hersenen blij maakt.",
+            "Water is het enige ingrediënt waar alles op aarde naar verlangt.",
+            "Is de spiegel een portaal naar een wereld waar alles precies in spiegelbeeld staat?",
+            "Bomen praten heel langzaam met elkaar via de wortels onder de grond.",
+            "Wat als honden ons zien als magische wezens omdat wij de deuren voor ze openen?"
+        ];
+
+        /* ----------------------------------------------------
+           2. STATE MANAGEMENT
+           ---------------------------------------------------- */
+        let currentStrain = STRAINS[0];
+        let currentMethod = 'joint';
+        let highnessLevel = 0;
+        let munchieSatisfaction = 0;
+        let userMoney = 25.00;
+        let isInhaling = false;
+        let inhaleProgress = 0;
+        let inhaleTimer = null;
+
+        // Roll Studio state
+        let rollState = {
+            step: 1,
+            paperName: 'Standard White',
+            paperColor: '#f8fafc',
+            tipStyle: 'M-Tip',
+            isGround: false,
+            mixSpreading: false,
+            isLit: false
+        };
+
+        // Microwave state
+        let selectedMicrowaveItem = PRODUCTS.find(p => p.id === 'kapsalon');
+        let microTimerSeconds = 30;
+        let isMicrowaveRunning = false;
+        let microInterval = null;
+
+        /* ----------------------------------------------------
+           3. INITIALIZATION
+           ---------------------------------------------------- */
+        window.addEventListener('load', () => {
+            renderStrainList();
+            selectStrain(STRAINS[0].id);
+            updateDeviceGraphic();
+            initSmokeCanvas();
+            renderMarketProducts('all');
+            updateMicrowaveDisplay();
+        });
+
+        function switchTab(tab) {
+            document.getElementById('view-lounge').classList.add('hidden');
+            document.getElementById('view-roll').classList.add('hidden');
+            document.getElementById('view-market').classList.add('hidden');
+
+            ['lounge', 'roll', 'market'].forEach(t => {
+                const btn = document.getElementById(`tab-btn-${t}`);
+                const mobBtn = document.getElementById(`mob-btn-${t}`);
+                if (t === tab) {
+                    if (btn) btn.className = "px-4 py-1.5 rounded-lg bg-weed-500 text-slate-950 font-bold transition flex items-center gap-2";
+                    if (mobBtn) mobBtn.className = "px-3 py-1.5 rounded-lg bg-weed-500 text-slate-950 font-bold";
+                } else {
+                    if (btn) btn.className = "px-4 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2";
+                    if (mobBtn) mobBtn.className = "px-3 py-1.5 rounded-lg text-slate-400";
+                }
+            });
+
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            if (tab === 'lounge') resizeCanvas();
         }
-    }
 
-    function useBong() {
-        if(!hasGroundWeed) return;
-        document.getElementById('joint-wrap').style.display = 'none';
-        document.getElementById('bong-wrap').style.display = 'block';
-        document.getElementById('status').innerText = "BONG IS KLAAR!";
-    }
+        /* ----------------------------------------------------
+           4. STRAIN SELECTION & RENDERING
+           ---------------------------------------------------- */
+        function renderStrainList(filterText = '') {
+            const container = document.getElementById('strain-list');
+            const filtered = STRAINS.filter(s => 
+                s.name.toLowerCase().includes(filterText.toLowerCase()) || 
+                s.type.toLowerCase().includes(filterText.toLowerCase())
+            );
 
-    // MULTI-PLATFORM CONTROLS (Touch & Mouse)
-    const lighter = document.getElementById('lighter-wrap'), flame = document.getElementById('flame');
-    let activeDrag = false;
+            container.innerHTML = filtered.map(s => `
+                <button onclick="selectStrain('${s.id}')" id="strain-btn-${s.id}" class="w-full text-left p-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800/80 transition flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${s.color}"></span>
+                        <span class="text-xs font-semibold text-slate-200 truncate max-w-[130px]">${s.name}</span>
+                    </div>
+                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">${s.type}</span>
+                </button>
+            `).join('');
+        }
 
-    function handleStart(e) {
-        activeDrag = true;
-        flame.style.display = 'block';
-        lighter.style.transition = "none";
-        moveLighter(e);
-    }
+        function filterStrains() {
+            const val = document.getElementById('strain-search').value;
+            renderStrainList(val);
+        }
 
-    function handleMove(e) {
-        if(!activeDrag) return;
-        moveLighter(e);
-        
-        const lRect = flame.getBoundingClientRect();
-        
-        // Joint collision
-        if(isRolled && !isLit) {
-            const cRect = document.getElementById('cherry-hitbox').getBoundingClientRect();
-            if(lRect.left < cRect.right && lRect.right > cRect.left && lRect.top < cRect.bottom && lRect.bottom > cRect.top) {
-                isLit = true;
-                document.getElementById('joint-img').src = "jointaan.png";
-                document.getElementById('status').innerText = "HIJSEN!";
+        function selectStrain(id) {
+            currentStrain = STRAINS.find(s => s.id === id);
+            
+            STRAINS.forEach(s => {
+                const btn = document.getElementById(`strain-btn-${s.id}`);
+                if (btn) {
+                    if (s.id === id) btn.classList.add('border-weed-500', 'bg-weed-500/10');
+                    else btn.classList.remove('border-weed-500', 'bg-weed-500/10');
+                }
+            });
+
+            document.getElementById('current-strain-name').innerText = currentStrain.name;
+
+            const detailsCard = document.getElementById('strain-details-card');
+            detailsCard.innerHTML = `
+                <div class="flex items-center justify-between mb-1.5">
+                    <h3 class="font-heading font-bold text-sm text-slate-200">${currentStrain.name}</h3>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-weed-500/20 text-weed-400 border border-weed-500/30">${currentStrain.type}</span>
+                </div>
+                <p class="text-xs text-slate-400 mb-2 leading-tight">${currentStrain.desc}</p>
+                <div class="grid grid-cols-2 gap-2 text-xs mb-2">
+                    <div class="bg-slate-900/60 p-1.5 rounded-lg border border-slate-800">
+                        <span class="text-slate-500 text-[9px] block">THC Gehalte</span>
+                        <span class="font-bold text-weed-400 text-xs">${currentStrain.thc}</span>
+                    </div>
+                    <div class="bg-slate-900/60 p-1.5 rounded-lg border border-slate-800">
+                        <span class="text-slate-500 text-[9px] block">CBD Gehalte</span>
+                        <span class="font-bold text-cyan-400 text-xs">${currentStrain.cbd}</span>
+                    </div>
+                </div>
+                <div class="text-[10px] text-slate-400 mb-2">
+                    <span class="text-slate-500">Ratio:</span> ${currentStrain.ratio}
+                </div>
+                <div class="flex flex-wrap gap-1">
+                    ${currentStrain.effects.map(e => `<span class="text-[9px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">${e}</span>`).join('')}
+                </div>
+            `;
+        }
+
+        /* ----------------------------------------------------
+           5. SIMULATOR MECHANICS
+           ---------------------------------------------------- */
+        function setMethod(method) {
+            currentMethod = method;
+            ['joint', 'bong', 'vape', 'custom'].forEach(m => {
+                const btn = document.getElementById(`btn-method-${m}`);
+                if (btn) {
+                    if (m === method) btn.className = "px-3 py-1 rounded-lg bg-weed-500 text-slate-950 font-semibold transition";
+                    else btn.className = "px-3 py-1 rounded-lg text-slate-400 hover:text-white transition";
+                }
+            });
+            updateDeviceGraphic();
+        }
+
+        function updateDeviceGraphic() {
+            const container = document.getElementById('device-graphic');
+            
+            if (currentMethod === 'joint' || currentMethod === 'custom') {
+                const paperCol = currentMethod === 'custom' ? rollState.paperColor : '#f8fafc';
+                container.innerHTML = `
+                    <div class="relative flex items-center justify-center">
+                        <svg width="230" height="40" viewBox="0 0 230 40" fill="none" class="drop-shadow-lg">
+                            <rect x="10" y="12" width="40" height="16" rx="2" fill="#d97706" />
+                            <line x1="20" y1="12" x2="20" y2="28" stroke="#b45309" stroke-width="2"/>
+                            <path d="M50 12 L200 8 L200 32 L50 28 Z" fill="${paperCol}" opacity="0.9" />
+                            <ellipse id="joint-cherry" cx="202" cy="20" rx="4" ry="11" fill="#ef4444" />
+                            <ellipse id="joint-glow" cx="202" cy="20" rx="2" ry="8" fill="#fbbf24" />
+                        </svg>
+                    </div>
+                `;
+            } else if (currentMethod === 'bong') {
+                container.innerHTML = `
+                    <div class="relative flex items-center justify-center">
+                        <svg width="140" height="180" viewBox="0 0 140 180" fill="none">
+                            <path d="M45 20 L45 90 L15 150 A 40 40 0 0 0 125 150 L95 90 L95 20 Z" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.3)" stroke-width="3"/>
+                            <path d="M25 140 A 35 35 0 0 0 115 140 L102 120 L38 120 Z" fill="rgba(6, 182, 212, 0.4)"/>
+                            <line x1="85" y1="95" x2="55" y2="135" stroke="rgba(255,255,255,0.6)" stroke-width="4"/>
+                            <circle id="bong-bowl" cx="92" cy="88" r="8" fill="${currentStrain.color}"/>
+                        </svg>
+                    </div>
+                `;
+            } else if (currentMethod === 'vape') {
+                container.innerHTML = `
+                    <div class="relative flex items-center justify-center">
+                        <svg width="80" height="160" viewBox="0 0 80 160" fill="none">
+                            <rect x="20" y="40" width="40" height="110" rx="8" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+                            <rect x="32" y="10" width="16" height="30" rx="4" fill="#0f172a" />
+                            <rect x="28" y="60" width="24" height="30" rx="4" fill="#0284c7" opacity="0.8"/>
+                            <text x="40" y="78" font-size="9" fill="#ffffff" text-anchor="middle">210°C</text>
+                            <circle cx="40" cy="125" r="5" fill="${currentStrain.color}" />
+                        </svg>
+                    </div>
+                `;
             }
         }
 
-        // Bong collision
-        if(document.getElementById('bong-wrap').style.display === 'block') {
-            const bRect = document.getElementById('bowl-hitbox').getBoundingClientRect();
-            if(lRect.left < bRect.right && lRect.right > bRect.left && lRect.top < bRect.bottom && lRect.bottom > bRect.top) {
-                highLevel = Math.min(highLevel + 0.04, 10);
-                applyTrip();
-                checkVomit();
-                spawnSmoke(bRect.left, bRect.top, 1);
+        const inhaleBtn = document.getElementById('inhale-btn');
+        const breathIndicator = document.getElementById('breath-indicator');
+        const breathFill = document.getElementById('breath-fill');
+
+        function startInhale() {
+            if (isInhaling) return;
+            isInhaling = true;
+            breathIndicator.style.opacity = '1';
+            
+            inhaleTimer = setInterval(() => {
+                if (inhaleProgress < 100) {
+                    inhaleProgress += 5;
+                    breathFill.style.width = `${inhaleProgress}%`;
+                    spawnDeviceSmoke();
+                }
+            }, 50);
+        }
+
+        function stopInhale() {
+            if (!isInhaling) return;
+            isInhaling = false;
+            breathIndicator.style.opacity = '0';
+
+            const addedHigh = Math.floor(inhaleProgress / 4);
+            increaseHighness(addedHigh);
+            exhaleSmokeBurst(inhaleProgress);
+
+            inhaleProgress = 0;
+            breathFill.style.width = '0%';
+            clearInterval(inhaleTimer);
+        }
+
+        inhaleBtn.addEventListener('mousedown', startInhale);
+        inhaleBtn.addEventListener('mouseup', stopInhale);
+        inhaleBtn.addEventListener('mouseleave', stopInhale);
+        inhaleBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startInhale(); });
+        inhaleBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopInhale(); });
+
+        function increaseHighness(amount) {
+            highnessLevel = Math.min(100, highnessLevel + amount);
+            document.getElementById('high-percent').innerText = `${highnessLevel}%`;
+            document.getElementById('high-bar').style.width = `${highnessLevel}%`;
+            applyTrippyEffects();
+        }
+
+        document.getElementById('sober-btn').addEventListener('click', () => {
+            highnessLevel = 0;
+            document.getElementById('high-percent').innerText = `0%`;
+            document.getElementById('high-bar').style.width = `0%`;
+            document.getElementById('app-body').style.filter = 'none';
+        });
+
+        function applyTrippyEffects() {
+            const body = document.getElementById('app-body');
+            if (highnessLevel > 50) {
+                const hue = (highnessLevel - 50) * 1.8;
+                body.style.filter = `contrast(108%) hue-rotate(${hue}deg) saturate(${100 + highnessLevel * 0.4}%)`;
+            } else {
+                body.style.filter = 'none';
             }
         }
-    }
 
-    function handleEnd() {
-        activeDrag = false;
-        flame.style.display = 'none';
-        lighter.style.transition = "0.5s";
-        lighter.style.left = "auto"; lighter.style.top = "auto";
-        lighter.style.right = "30px"; lighter.style.bottom = window.innerWidth < 768 ? "37%" : "30px";
-        if(isInhaling) releaseBreath();
-    }
+        /* ----------------------------------------------------
+           6. CANVAS 2D SMOKE ENGINE
+           ---------------------------------------------------- */
+        let canvas, ctx, particles = [];
 
-    function moveLighter(e) {
-        let clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        let clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        lighter.style.left = (clientX - lighter.offsetWidth/2) + "px";
-        lighter.style.top = (clientY - lighter.offsetHeight/2) + "px";
-    }
+        function initSmokeCanvas() {
+            canvas = document.getElementById('smokeCanvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
 
-    lighter.addEventListener('mousedown', handleStart);
-    lighter.addEventListener('touchstart', handleStart);
-    document.addEventListener('mousemove', handleMove);
-    document.addEventListener('touchmove', handleMove);
-    document.addEventListener('mouseup', handleEnd);
-    document.addEventListener('touchend', handleEnd);
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                if (Math.random() < 0.3) {
+                    particles.push(new SmokeParticle(mouseX, mouseY, Math.random() * 1.5 - 0.75, -0.5, Math.random() * 15 + 10));
+                }
+            });
 
-    // JOINT ROKEN (Nu ook met touch)
-    const jointWrap = document.getElementById('joint-wrap');
-    let inhaleInterval;
-
-    function startInhale() {
-        if(!isLit || jointWidth <= 50) return;
-        isInhaling = true;
-        document.getElementById('status').innerText = "INHALEREN...";
-        inhaleInterval = setInterval(() => {
-            if(jointWidth > 50) {
-                jointWidth -= 2;
-                lungFullness += 0.3;
-                document.getElementById('joint-img').style.width = jointWidth + "px";
-                if(jointWidth < 120) document.getElementById('joint-img').src = "stingingroger.png";
-                spawnSmoke(document.getElementById('cherry-hitbox').getBoundingClientRect().left, window.innerHeight/2, 1);
-            }
-        }, 50);
-    }
-
-    jointWrap.addEventListener('mousedown', startInhale);
-    jointWrap.addEventListener('touchstart', (e) => { e.preventDefault(); startInhale(); });
-
-    function releaseBreath() {
-        if(!isInhaling) return;
-        isInhaling = false; clearInterval(inhaleInterval);
-        document.getElementById('status').innerText = "HOUD IN...";
-        setTimeout(() => {
-            if(lungFullness > 0) {
-                highLevel = Math.min(highLevel + lungFullness, 10);
-                lungFullness = 0;
-                applyTrip();
-                checkVomit();
-                spawnMouthSmoke();
-                document.getElementById('status').innerText = "LEKKER.";
-            }
-        }, 1500);
-    }
-
-    function applyTrip() {
-        const body = document.getElementById('main-body'), overlay = document.getElementById('trip-overlay');
-        body.style.filter = highLevel > 0 ? `hue-rotate(${highLevel*15}deg)` : "none";
-        overlay.style.background = highLevel > 0 ? `rgba(163, 255, 46, ${highLevel*0.04})` : "transparent";
-        body.style.animation = highLevel > 6 ? "soft-shake 0.1s infinite" : "none";
-    }
-
-    function checkVomit() {
-        if(highLevel >= 8) {
-            pukeAnimation();
-            document.getElementById('status').innerText = "IEL! KLIK ASBAK.";
+            requestAnimationFrame(animateSmoke);
         }
-    }
 
-    function cleanUp() {
-        highLevel = 0; applyTrip();
-        isRolled = false; isLit = false; jointWidth = 350;
-        document.getElementById('joint-wrap').style.display = 'none';
-        document.getElementById('bong-wrap').style.display = 'none';
-        document.getElementById('joint-img').src = "jointuit.png";
-        document.getElementById('joint-img').style.width = "350px";
-        document.getElementById('status').innerText = "OPGERUIMD.";
-    }
+        function resizeCanvas() {
+            if (!canvas || !canvas.parentElement) return;
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
 
-    function pukeAnimation() {
-        const startX = window.innerWidth / 2, startY = window.innerHeight - (window.innerWidth < 768 ? 200 : 50);
-        for (let i = 0; i < 40; i++) {
+        class SmokeParticle {
+            constructor(x, y, vx, vy, radius) {
+                this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+                this.radius = radius; this.alpha = 0.4; this.growth = Math.random() * 0.3 + 0.1;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy; this.radius += this.growth; this.alpha -= 0.003;
+            }
+            draw() {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(225, 230, 240, ${Math.max(0, this.alpha)})`;
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = currentStrain.color;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function spawnDeviceSmoke() {
+            if (!canvas) return;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2 - 20;
+            particles.push(new SmokeParticle(centerX, centerY, Math.random() * 2 - 1, -Math.random() * 2 - 1, Math.random() * 10 + 8));
+        }
+
+        function exhaleSmokeBurst(intensity) {
+            if (!canvas) return;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2 + 50;
+            const count = Math.floor(intensity * 0.8);
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 3 + 1;
+                particles.push(new SmokeParticle(centerX, centerY, Math.cos(angle) * speed, Math.sin(angle) * speed - 1.5, Math.random() * 20 + 15));
+            }
+        }
+
+        function animateSmoke() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].alpha <= 0 || particles[i].radius > 120) particles.splice(i, 1);
+            }
+            requestAnimationFrame(animateSmoke);
+        }
+
+        /* ----------------------------------------------------
+           7. INTERACTIEVE DRAAI STUDIO LOGIC
+           ---------------------------------------------------- */
+        function selectPaper(name, color) {
+            rollState.paperName = name;
+            rollState.paperColor = color;
+            advanceRollStep(2, "Stap 2/5: Tip Rollen", "Mooie keuze! Rol nu een stevig tippetje.");
+            document.getElementById('roll-step-1').classList.add('hidden');
+            document.getElementById('roll-step-2').classList.remove('hidden');
+        }
+
+        function rollTipStyle(style) {
+            rollState.tipStyle = style;
+            const visual = document.getElementById('tip-visual');
+            visual.innerText = style === 'M-Tip' ? 'M' : '@';
+            advanceRollStep(3, "Stap 3/5: Wiet Grinden", "Tijd om je wiet te malen met de grinder!");
+            document.getElementById('roll-step-2').classList.add('hidden');
+            document.getElementById('roll-step-3').classList.remove('hidden');
+        }
+
+        function grindWeedAnimation() {
+            const disc = document.getElementById('grinder-disc');
+            disc.classList.add('animate-grind');
             setTimeout(() => {
-                const p = document.createElement('div'); p.className = 'puke-particle';
-                p.style.width = p.style.height = (Math.random()*10+5)+'px';
-                p.style.left = startX+'px'; p.style.top = startY+'px';
-                document.body.appendChild(p);
-                p.animate([{opacity:1},{transform:`translate(${(Math.random()-0.5)*200}px,-150px)`,opacity:0.8},{transform:`translate(${(Math.random()-0.5)*300}px,${window.innerHeight}px)`,opacity:0}], 1200).onfinish=()=>p.remove();
-            }, i*10);
+                disc.classList.remove('animate-grind');
+                rollState.isGround = true;
+                advanceRollStep(4, "Stap 4/5: Vullen & Verdelen", "Verdeel de gemalen mix netjes over je vloeitje.");
+                document.getElementById('roll-step-3').classList.add('hidden');
+                document.getElementById('roll-step-4').classList.remove('hidden');
+            }, 1200);
         }
-    }
 
-    function spawnSmoke(x, y, amount) {
-        let s = document.createElement('div'); s.className = 'smoke';
-        s.style.left = x + "px"; s.style.top = y + "px"; s.style.width = "15px"; s.style.height = "15px";
-        document.body.appendChild(s);
-        s.animate([{opacity:0.4},{opacity:0,transform:'translateY(-80px) scale(3)'}], 1500).onfinish=()=>s.remove();
-    }
-
-    function spawnMouthSmoke() {
-        for(let i=0; i<8; i++) {
+        function spreadMix() {
+            const mix = document.getElementById('paper-weed-mix');
+            mix.style.opacity = '1';
             setTimeout(() => {
-                let s = document.createElement('div'); s.className = 'smoke';
-                s.style.left = "50%"; s.style.bottom = "40%"; s.style.width = "30px"; s.style.height = "30px";
-                document.body.appendChild(s);
-                s.animate([{opacity:0.5},{opacity:0,transform:'translateY(-200px) scale(8)'}], 2500).onfinish=()=>s.remove();
-            }, i*100);
+                advanceRollStep(5, "Stap 5/5: Dichtrollen & Aansteken", "Dichtgerold! Steek je joint aan.");
+                document.getElementById('roll-step-4').classList.add('hidden');
+                document.getElementById('roll-step-5').classList.remove('hidden');
+            }, 800);
         }
-    }
-</script>
+
+        function lightJoint() {
+            const fire = document.getElementById('joint-fire');
+            fire.style.opacity = '1';
+            
+            // Show custom joint in lounge simulator!
+            const customBtn = document.getElementById('btn-method-custom');
+            customBtn.classList.remove('hidden');
+            setMethod('custom');
+
+            setTimeout(() => {
+                switchTab('lounge');
+            }, 1000);
+        }
+
+        function advanceRollStep(stepNum, badgeText, statusText) {
+            rollState.step = stepNum;
+            document.getElementById('roll-step-badge').innerText = badgeText;
+            document.getElementById('roll-status-text').innerText = statusText;
+        }
+
+        function resetRollStudio() {
+            rollState.step = 1;
+            advanceRollStep(1, "Stap 1/5: Vloei Kiezen", "Kies je vloeitje.");
+            document.getElementById('roll-step-1').classList.remove('hidden');
+            document.getElementById('roll-step-2').classList.add('hidden');
+            document.getElementById('roll-step-3').classList.add('hidden');
+            document.getElementById('roll-step-4').classList.add('hidden');
+            document.getElementById('roll-step-5').classList.add('hidden');
+        }
+
+        /* ----------------------------------------------------
+           8. SUPERMARKT & MAGNETRON LOGIC
+           ---------------------------------------------------- */
+        function renderMarketProducts(category = 'all') {
+            const grid = document.getElementById('market-products-grid');
+            const filtered = category === 'all' ? PRODUCTS : PRODUCTS.filter(p => p.category === category);
+
+            grid.innerHTML = filtered.map(p => `
+                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 flex flex-col justify-between hover:border-slate-700 transition">
+                    <div>
+                        <div class="text-3xl text-center my-2">${p.icon}</div>
+                        <h4 class="font-bold text-xs text-slate-200 text-center mb-1">${p.name}</h4>
+                        <span class="text-[10px] text-amber-400 font-bold block text-center mb-2">€${p.price.toFixed(2)}</span>
+                    </div>
+                    <div class="space-y-1">
+                        <button onclick="buyProduct('${p.id}')" class="w-full py-1.5 rounded-lg bg-weed-500 hover:bg-weed-400 text-slate-950 font-bold text-xs transition">
+                            Kopen
+                        </button>
+                        ${p.isMicrowaveable ? `
+                            <button onclick="selectForMicrowave('${p.id}')" class="w-full py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] transition">
+                                In Magnetron
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterMarket(cat) {
+            renderMarketProducts(cat);
+        }
+
+        function addMoney() {
+            userMoney += 10.00;
+            document.getElementById('user-money').innerText = `€${userMoney.toFixed(2)}`;
+        }
+
+        function buyProduct(id) {
+            const prod = PRODUCTS.find(p => p.id === id);
+            if (userMoney >= prod.price) {
+                userMoney -= prod.price;
+                document.getElementById('user-money').innerText = `€${userMoney.toFixed(2)}`;
+                
+                munchieSatisfaction = Math.min(100, munchieSatisfaction + prod.satisfaction);
+                document.getElementById('munchie-level-text').innerText = `${munchieSatisfaction}%`;
+                document.getElementById('munchie-bar').style.width = `${munchieSatisfaction}%`;
+            } else {
+                alert("Niet genoeg geld! Klik op + €10.00 Pinnen.");
+            }
+        }
+
+        function selectForMicrowave(id) {
+            selectedMicrowaveItem = PRODUCTS.find(p => p.id === id);
+            document.getElementById('micro-food-item').innerText = selectedMicrowaveItem.icon;
+        }
+
+        function setMicroTime(sec) {
+            if (isMicrowaveRunning) return;
+            microTimerSeconds += sec;
+            updateMicrowaveDisplay();
+        }
+
+        function updateMicrowaveDisplay() {
+            const mins = Math.floor(microTimerSeconds / 60).toString().padStart(2, '0');
+            const secs = (microTimerSeconds % 60).toString().padStart(2, '0');
+            document.getElementById('micro-timer').innerText = `${mins}:${secs}`;
+        }
+
+        function startMicrowave() {
+            if (isMicrowaveRunning || microTimerSeconds <= 0) return;
+            isMicrowaveRunning = true;
+
+            const light = document.getElementById('micro-light');
+            const food = document.getElementById('micro-food-item');
+            const btn = document.getElementById('micro-start-btn');
+
+            light.style.opacity = '1';
+            food.classList.add('microwave-plate-spin');
+            btn.innerText = 'BZZZ...';
+
+            microInterval = setInterval(() => {
+                microTimerSeconds--;
+                updateMicrowaveDisplay();
+
+                if (microTimerSeconds <= 0) {
+                    clearInterval(microInterval);
+                    isMicrowaveRunning = false;
+                    light.style.opacity = '0';
+                    food.classList.remove('microwave-plate-spin');
+                    btn.innerText = 'START';
+                    microTimerSeconds = 30;
+                    updateMicrowaveDisplay();
+
+                    // Boost munchies when meal is ready!
+                    munchieSatisfaction = Math.min(100, munchieSatisfaction + selectedMicrowaveItem.satisfaction);
+                    document.getElementById('munchie-level-text').innerText = `${munchieSatisfaction}%`;
+                    document.getElementById('munchie-bar').style.width = `${munchieSatisfaction}%`;
+                }
+            }, 1000);
+        }
+
+        /* ----------------------------------------------------
+           9. THEMES & AUDIO
+           ---------------------------------------------------- */
+        function setTheme(theme) {
+            const body = document.getElementById('app-body');
+            body.className = "text-slate-100 font-sans min-h-screen flex flex-col transition-all duration-700 overflow-x-hidden ";
+            if (theme === 'cosmic') body.classList.add('bg-cosmic');
+            else if (theme === 'coffeeshop') body.classList.add('bg-coffeeshop');
+            else if (theme === 'sunset') body.classList.add('bg-sunset');
+            else if (theme === 'lofi') body.classList.add('bg-lofi');
+        }
+
+        let audioCtx = null, isAudioActive = false, ambientOsc = null;
+        document.getElementById('toggle-audio-btn').addEventListener('click', () => {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (!isAudioActive) {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(174, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start();
+                ambientOsc = osc;
+                isAudioActive = true;
+                document.getElementById('toggle-audio-btn').innerHTML = '<i class="fa-solid fa-pause text-xs"></i>';
+            } else {
+                if (ambientOsc) ambientOsc.stop();
+                isAudioActive = false;
+                document.getElementById('toggle-audio-btn').innerHTML = '<i class="fa-solid fa-play text-xs"></i>';
+            }
+        });
+
+        function generateThought() {
+            const random = THOUGHTS[Math.floor(Math.random() * THOUGHTS.length)];
+            document.getElementById('thought-text').innerText = `"${random}"`;
+        }
+    </script>
 </body>
 </html>
